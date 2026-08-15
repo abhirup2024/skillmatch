@@ -15,16 +15,16 @@ function App() {
 
   // 1. Initial Load: Fetch Resumes AND available Skills
   useEffect(() => {
-    // Fetch Resumes
-    fetch('http://127.0.0.1:8000/api/resume/')
+    // Fetch Resumes from Render
+    fetch('https://skillmatch-m4qf.onrender.com/api/resume/')
       .then(response => response.json())
       .then(data => {
         setResumes(data)
         if (data.length > 0) setSelectedResumeId(data[0].id)
       })
 
-    // Fetch Skills (to populate the form checkboxes)
-    fetch('http://127.0.0.1:8000/api/skills/')
+    // Fetch Skills from Render (to populate the form checkboxes)
+    fetch('https://skillmatch-m4qf.onrender.com/api/skills/')
       .then(response => response.json())
       .then(data => setSkills(data))
   }, [])
@@ -34,7 +34,7 @@ function App() {
     if (!selectedResumeId) return;
 
     setLoading(true)
-    fetch(`http://127.0.0.1:8000/api/resume/${selectedResumeId}/match/`)
+    fetch(`https://skillmatch-m4qf.onrender.com/api/resume/${selectedResumeId}/match/`)
       .then(response => response.json())
       .then(data => {
         setMatches(data)
@@ -51,7 +51,7 @@ function App() {
       extracted_skills: newSkills // This is an array of Skill IDs
     }
 
-    fetch('http://127.0.0.1:8000/api/resume/', {
+    fetch('https://skillmatch-m4qf.onrender.com/api/resume/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
