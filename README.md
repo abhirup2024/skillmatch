@@ -17,9 +17,11 @@ Live Database Syncing: Instantaneous cross-origin data fetching from the cloud d
 Local Setup Instructions
 
 1. Clone the repository:
+
 git clone [https://github.com/abhirup2024/skillmatch.git](https://github.com/abhirup2024/skillmatch.git)
 
 2. Start the Django Backend:
+
 cd skillmatch
 python -m venv venv
 .\venv\Scripts\activate
@@ -27,6 +29,7 @@ pip install -r requirements.txt
 python manage.py runserver
 
 3. Start the React Frontend:
+
 Open a new terminal.
 cd frontend
 npm install
