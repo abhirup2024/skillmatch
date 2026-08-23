@@ -19,6 +19,8 @@ class Job(models.Model):
 class Resume(models.Model):
     candidate_name = models.CharField(max_length=200)
     extracted_skills = models.ManyToManyField(Skill, related_name='resumes')
+    #added
+    skills_data= models.JSONField(default=list, blank=True)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

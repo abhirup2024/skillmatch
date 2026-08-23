@@ -1,8 +1,10 @@
+from datetime import datetime
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Skill,Job,Resume
+from .models import Skill, Job, Resume
 from .serializers import SkillSerializer, JobSerializer, ResumeSerializer
+from .matching_engine import compute_overall_match, get_graph_match_score
 
 class SkillViewSet(viewsets.ModelViewSet):
     queryset = Skill.objects.all()
@@ -20,28 +22,47 @@ class ResumeViewSet(viewsets.ModelViewSet):
     def match(self, request, pk=None):
         resume = self.get_object()
 
-        resume_skills = set(resume.extracted_skills.values_list('name',flat='True'))
+        # Retrieve structured skills data, with fallback to extracted_skills
+        candidate_skills = resume.skills_data
+        if not candidate_skills:
+            current_year = datetime.now().year
+            candidate_skills = [
+                {"name": s.name, "last_used": current_year}
+                for s in resume.extracted_skills.all()
+            ]
 
+        candidate_skill_names = [s.get("name", "") for s in candidate_skills]
         jobs = Job.objects.all()
         match_results = []
 
         for job in jobs:
-            job_skills= set(job.required_skills.values_list('name', flat=True))
+            required_skill_names = list(job.required_skills.values_list('name', flat=True))
 
-            if not job_skills:
+            if not required_skill_names:
                 match_score = 0.0
+                matched_skills = []
+                missing_skills = []
             else:
-                overlap = resume_skills.intersection(job_skills)
-                match_score = (len(overlap)/len(job_skills))*100
+                # Execute Graph Traversal + Time Decay calculation
+                match_score = compute_overall_match(required_skill_names, candidate_skills)
+
+                # Classify skills for UI feedback
+                matched_skills = [
+                    req for req in required_skill_names
+                    if any(get_graph_match_score(req, cand) > 0.0 for cand in candidate_skill_names)
+                ]
+                missing_skills = [
+                    req for req in required_skill_names
+                    if req not in matched_skills
+                ]
 
             match_results.append({
                 'job_id': job.id,
                 'job_title': job.title,
-                'match_percentage': round(match_score,2),
-                'matched_skills': list(overlap),
-                'missing_skills': list(job_skills-resume_skills)
+                'match_percentage': match_score,
+                'matched_skills': matched_skills,
+                'missing_skills': missing_skills
             })
 
-        match_results.sort(key=lambda x: x['match_percentage'],reverse=True)
-
+        match_results.sort(key=lambda x: x['match_percentage'], reverse=True)
         return Response(match_results)
