@@ -240,7 +240,7 @@ function App() {
                   required
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #444', backgroundColor: '#333', color: '#fff' }}
+                  style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #444', backgroundColor: '#333', color: '#ffffff' }}
                 />
               </div>
 
@@ -267,7 +267,7 @@ function App() {
                           max={new Date().getFullYear()} 
                           value={selectedSkills[skill.name]} 
                           onChange={(e) => handleYearChange(skill.name, e.target.value)} 
-                          style={{ width: '70px', padding: '4px', borderRadius: '4px', border: 'none', textAlign: 'center', color: '#000' }}
+                          style={{ width: '70px', padding: '4px', borderRadius: '4px', border: '1px solid #555', backgroundColor: '#222', textAlign: 'center', color: '#fff' }}
                           title="Year last used"
                         />
                       )}
