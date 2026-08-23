@@ -102,7 +102,7 @@ function App() {
     })
   }
 
-  // 4. Handle Deleting a Candidate
+    // 4. Handle Deleting a Candidate
   const deleteCandidate = async (candidateId) => {
     if (!window.confirm("Are you sure you want to delete this candidate?")) return;
   
@@ -114,11 +114,18 @@ function App() {
       if (response.ok) {
         alert("Candidate successfully deleted.");
         
-        // NEW: Explicitly clear the ghost state so the UI resets!
-        setSelectedResumeId('');
-        setMatches([]); 
+        // 1. Fetch the fresh list manually so we have the exact new data
+        const refreshRes = await fetch(`${API_BASE}/resume/`);
+        const newData = await refreshRes.json();
         
-        fetchResumes(); // Now when this runs, it will freshly select the true first candidate
+        // 2. Force the state updates in strict order
+        setResumes(newData);
+        if (newData.length > 0) {
+          setSelectedResumeId(newData[0].id); // Hard-set to the new first person
+        } else {
+          setSelectedResumeId('');
+          setMatches([]);
+        }
       } else {
         alert("Failed to delete candidate.");
       }
