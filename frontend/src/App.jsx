@@ -113,7 +113,12 @@ function App() {
   
       if (response.ok) {
         alert("Candidate successfully deleted.");
-        fetchResumes(); 
+        
+        // NEW: Explicitly clear the ghost state so the UI resets!
+        setSelectedResumeId('');
+        setMatches([]); 
+        
+        fetchResumes(); // Now when this runs, it will freshly select the true first candidate
       } else {
         alert("Failed to delete candidate.");
       }
