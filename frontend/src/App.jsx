@@ -7,24 +7,34 @@ function App() {
   const [matches, setMatches] = useState([])
   const [loading, setLoading] = useState(false)
 
-  // Write State (For the Form)
+  // Write State (For the Form & Advanced Engine)
   const [skills, setSkills] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [newName, setNewName] = useState('')
-  const [newSkills, setNewSkills] = useState([])
+  const [selectedSkills, setSelectedSkills] = useState({}) // Stores { "React": 2026 }
 
-  // 1. Initial Load: Fetch Resumes AND available Skills
-  useEffect(() => {
-    // Fetch Resumes from Render
-    fetch('https://skillmatch-m4qf.onrender.com/api/resume/')
+  const API_BASE = 'https://skillmatch-m4qf.onrender.com/api'
+
+  // Helper function to fetch resumes so we can call it after deleting/adding
+  const fetchResumes = () => {
+    fetch(`${API_BASE}/resume/`)
       .then(response => response.json())
       .then(data => {
         setResumes(data)
-        if (data.length > 0) setSelectedResumeId(data[0].id)
+        if (data.length > 0) {
+          // Only auto-select if nothing is currently selected
+          setSelectedResumeId(prev => prev ? prev : data[0].id)
+        } else {
+          setSelectedResumeId('')
+          setMatches([])
+        }
       })
+  }
 
-    // Fetch Skills from Render (to populate the form checkboxes)
-    fetch('https://skillmatch-m4qf.onrender.com/api/skills/')
+  // 1. Initial Load: Fetch Resumes AND available Skills
+  useEffect(() => {
+    fetchResumes()
+    fetch(`${API_BASE}/skills/`)
       .then(response => response.json())
       .then(data => setSkills(data))
   }, [])
@@ -34,52 +44,103 @@ function App() {
     if (!selectedResumeId) return;
 
     setLoading(true)
-    fetch(`https://skillmatch-m4qf.onrender.com/api/resume/${selectedResumeId}/match/`)
+    fetch(`${API_BASE}/resume/${selectedResumeId}/match/`)
       .then(response => response.json())
       .then(data => {
         setMatches(data)
         setLoading(false)
       })
+      .catch(error => {
+        console.error("Error fetching matches:", error)
+        setLoading(false)
+      })
   }, [selectedResumeId])
 
-  // 3. Handle Form Submission (The POST Request)
+  // 3. Handle Form Submission for the Time-Decay Backend
   const handleAddCandidate = (e) => {
-    e.preventDefault() // Prevents the browser from reloading the page
+    e.preventDefault()
+    
+    const skillsPayload = Object.entries(selectedSkills).map(([skillName, year]) => ({
+      name: skillName,
+      last_used: year
+    }));
+    const extractedSkillsIds = skills
+      .filter(skill => selectedSkills[skill.name])
+      .map(skill => skill.id);
+
     
     const payload = {
       candidate_name: newName,
-      extracted_skills: newSkills // This is an array of Skill IDs
+      skills_data: skillsPayload,
+      extracted_skills: extractedSkillsIds 
     }
 
-    fetch('https://skillmatch-m4qf.onrender.com/api/resume/', {
+    fetch(`${API_BASE}/resume/`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     })
-    .then(response => response.json())
-    .then(data => {
-      // Add the new candidate to the dropdown list
-      setResumes([...resumes, data])
-      // Automatically select the new candidate to run their match math
-      setSelectedResumeId(data.id)
-      // Reset and hide the form
-      setNewName('')
-      setNewSkills([])
-      setShowForm(false)
+    .then(async response => {
+      const data = await response.json();
+      if (!response.ok) {
+        // If Django rejects it, throw the exact error message!
+        throw new Error(JSON.stringify(data));
+      }
+      return data;
     })
-    .catch(error => console.error("Error adding candidate:", error))
+    .then(data => {
+      // On success, pull the fresh, correct list directly from the database
+      fetchResumes(); 
+      setSelectedResumeId(data.id);
+      setNewName('');
+      setSelectedSkills({});
+      setShowForm(false);
+    })
+    .catch(error => {
+      console.error("Error adding candidate:", error);
+      alert(`Backend rejected the candidate. Error: ${error.message}`);
+    })
   }
 
-  // Helper function to handle checking/unchecking skills
-  const handleSkillToggle = (skillId) => {
-    if (newSkills.includes(skillId)) {
-      setNewSkills(newSkills.filter(id => id !== skillId))
-    } else {
-      setNewSkills([...newSkills, skillId])
+  // 4. Handle Deleting a Candidate
+  const deleteCandidate = async (candidateId) => {
+    if (!window.confirm("Are you sure you want to delete this candidate?")) return;
+  
+    try {
+      const response = await fetch(`${API_BASE}/resume/${candidateId}/`, {
+        method: 'DELETE',
+      });
+  
+      if (response.ok) {
+        alert("Candidate successfully deleted.");
+        fetchResumes(); // Refresh the list
+      } else {
+        alert("Failed to delete candidate.");
+      }
+    } catch (error) {
+      console.error("Error deleting:", error);
     }
-  }
+  };
+
+  // 5. Helpers for the Checkboxes and Year Inputs
+  const handleToggle = (skillName) => {
+    setSelectedSkills(prev => {
+      const updated = { ...prev };
+      if (updated[skillName]) {
+        delete updated[skillName]; // Uncheck
+      } else {
+        updated[skillName] = new Date().getFullYear(); // Check and default to current year
+      }
+      return updated;
+    });
+  };
+
+  const handleYearChange = (skillName, year) => {
+    setSelectedSkills(prev => ({
+      ...prev,
+      [skillName]: parseInt(year, 10) || new Date().getFullYear()
+    }));
+  };
 
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '800px', margin: '0 auto', color: '#fff' }}>
@@ -111,18 +172,33 @@ function App() {
           </div>
 
           <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>Select Skills:</label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+            <label style={{ display: 'block', marginBottom: '10px' }}>Select Skills & Last Used Year:</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               {skills.map(skill => (
-                <label key={skill.id} style={{ backgroundColor: '#333', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer' }}>
-                  <input 
-                    type="checkbox" 
-                    checked={newSkills.includes(skill.id)}
-                    onChange={() => handleSkillToggle(skill.id)}
-                    style={{ marginRight: '8px' }}
-                  />
-                  {skill.name}
-                </label>
+                <div key={skill.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: '#333', padding: '8px', borderRadius: '4px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', flex: 1 }}>
+                    <input 
+                      type="checkbox" 
+                      checked={!!selectedSkills[skill.name]}
+                      onChange={() => handleToggle(skill.name)}
+                      style={{ marginRight: '8px' }}
+                    />
+                    {skill.name}
+                  </label>
+
+                  {/* Year Input (Only visible if checked) */}
+                  {selectedSkills[skill.name] && (
+                    <input 
+                      type="number" 
+                      min="1990" 
+                      max={new Date().getFullYear()} 
+                      value={selectedSkills[skill.name]} 
+                      onChange={(e) => handleYearChange(skill.name, e.target.value)} 
+                      style={{ width: '70px', padding: '4px', borderRadius: '4px', border: 'none', textAlign: 'center', color: '#000' }}
+                      title="Year last used"
+                    />
+                  )}
+                </div>
               ))}
             </div>
           </div>
@@ -133,14 +209,15 @@ function App() {
         </form>
       )}
       
-      {/* The Dynamic Dropdown Menu */}
-      <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#222', borderRadius: '8px' }}>
-        <label htmlFor="resume-select" style={{ marginRight: '10px', fontSize: '1.2rem' }}>Select Candidate: </label>
+      {/* The Dynamic Dropdown Menu & Delete Button */}
+      <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#222', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '15px' }}>
+        <label htmlFor="resume-select" style={{ fontSize: '1.2rem' }}>Select Candidate: </label>
+        
         <select 
           id="resume-select"
           value={selectedResumeId} 
           onChange={(e) => setSelectedResumeId(e.target.value)}
-          style={{ padding: '8px', fontSize: '1rem', borderRadius: '4px', backgroundColor: '#333', color: '#fff', border: '1px solid #444' }}
+          style={{ padding: '8px', fontSize: '1rem', borderRadius: '4px', backgroundColor: '#333', color: '#fff', border: '1px solid #444', flex: 1 }}
         >
           {resumes.map(resume => (
             <option key={resume.id} value={resume.id}>
@@ -148,6 +225,16 @@ function App() {
             </option>
           ))}
         </select>
+
+        {/* Delete Button added right next to the select dropdown! */}
+        {selectedResumeId && (
+          <button 
+            onClick={() => deleteCandidate(selectedResumeId)} 
+            style={{ padding: '8px 12px', background: '#ff4d4d', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+          >
+            Delete Profile
+          </button>
+        )}
       </div>
 
       {/* The Match Results */}
@@ -155,7 +242,7 @@ function App() {
         <p>Calculating matches...</p>
       ) : (
         <div>
-          {matches.map((match) => (
+          {Array.isArray(matches) ? matches.map((match) => (
             <div key={match.job_id} style={{ border: '1px solid #444', margin: '15px 0', padding: '15px', borderRadius: '8px', backgroundColor: '#1a1a1a' }}>
               <h2 style={{ marginTop: 0 }}>{match.job_title}</h2>
               <h3 style={{ color: match.match_percentage > 50 ? '#4ade80' : '#ff4d4d' }}>
@@ -182,7 +269,9 @@ function App() {
                 </div>
               </div>
             </div>
-          ))}
+          )) : (
+            <p style={{ color: '#ff4d4d' }}>No valid match data available. Please select a different candidate.</p>
+          )}
         </div>
       )}
     </div>
