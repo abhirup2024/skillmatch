@@ -168,7 +168,7 @@ function App() {
   });
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '800px', margin: '0 auto', color: '#fff' }}>
+    <div style={{ padding: '30px', fontFamily: 'sans-serif', maxWidth: '1200px', width:'95%', margin: '0 auto', color: '#fff' }}>
       
       {/* Navigation Header */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginBottom: '30px', padding: '15px', backgroundColor: '#222', borderRadius: '8px' }}>
@@ -246,7 +246,7 @@ function App() {
 
               <div style={{ marginBottom: '15px' }}>
                 <label style={{ display: 'block', marginBottom: '10px' }}>Select Skills & Last Used Year:</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '15px' }}>
                   {skills.map(skill => (
                     <div key={skill.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: '#333', padding: '8px', borderRadius: '4px' }}>
                       <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', flex: 1 }}>
@@ -321,7 +321,7 @@ function App() {
                     Match Score: {match.match_percentage}%
                   </h3>
                   
-                  <div style={{ display: 'flex', gap: '40px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', marginTop: '15px', backgroundColor: '#222', padding: '20px', borderRadius: '6px' }}>
                     <div>
                       <p><strong>Matched Skills:</strong></p>
                       <ul style={{ color: '#4ade80' }}>
