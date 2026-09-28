@@ -4,11 +4,12 @@ from collections import deque
 
 # Specific half-lives for different technologies
 DECAY_RATES = {
-    'SQL': 0.05,       # Slow decay (Core foundation)
-    'C++': 0.05,       # Slow decay
-    'React': 0.25,     # Fast decay (Constantly changing)
-    'Node.js': 0.15,   # Medium decay
-    'default': 0.15    # Fallback for unknown skills
+    'SQL': 0.086,      # 8-year half-life (Core foundation)
+    'C++': 0.086,      # 8-year half-life
+    'Django': 0.138,   # 5-year half-life (Backend)
+    'Node.js': 0.138,  # 5-year half-life 
+    'React': 0.231,    # 3-year half-life (Frontend)
+    'default': 0.231   # Fallback 
 }
 # Directed Acyclic Graph defining skill relationships and inheritance weights
 SKILL_GRAPH = {
