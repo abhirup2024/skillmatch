@@ -2,6 +2,14 @@ import math
 from datetime import datetime
 from collections import deque
 
+# Specific half-lives for different technologies
+DECAY_RATES = {
+    'SQL': 0.05,       # Slow decay (Core foundation)
+    'C++': 0.05,       # Slow decay
+    'React': 0.25,     # Fast decay (Constantly changing)
+    'Node.js': 0.15,   # Medium decay
+    'default': 0.15    # Fallback for unknown skills
+}
 # Directed Acyclic Graph defining skill relationships and inheritance weights
 SKILL_GRAPH = {
     "JavaScript": {"children": {"React": 0.75, "Node.js": 0.75}, "parents": {}},
@@ -70,7 +78,8 @@ def compute_overall_match(required_skills: list, candidate_skill_data: list) -> 
 
             graph_score = get_graph_match_score(req, s_name)
             if graph_score > 0.0:
-                decay = calculate_time_decay(s_year)
+                lambda_constant = DECAY_RATES.get(s_name, DECAY_RATES['default'])
+                decay = calculate_time_decay(s_year, decay_lambda=lambda_constant)
                 final_skill_score = graph_score * decay
                 best_skill_score = max(best_skill_score, final_skill_score)
 
